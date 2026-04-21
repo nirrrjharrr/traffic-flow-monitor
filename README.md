@@ -10,6 +10,14 @@ Manual traffic surveys are labor-intensive and inconsistent. This system automat
 
 ---
 
+## Sample Output
+
+![Sample output](assets/sample_output.png)
+
+The overlay shows live detections, track IDs, cumulative class counts, and flow rate during playback. Press `S` to save the current frame as `sample_output.png`.
+
+---
+
 ## Key Features
 
 - **YOLOv8s detection** with class-specific confidence thresholds (lower threshold for motorcycles to compensate for their smaller visual footprint)
@@ -118,26 +126,6 @@ MIN_BOX_AREA           = 400
 LINE_Y_RATIO           = 0.55   # count line as fraction of frame height
 LINE_TOLERANCE         = 8      # dead-band half-width in pixels
 ```
-
----
-
-## Example Output
-
-At exit, the terminal prints a structured summary:
-
-```
-── FINAL COUNT ─────────────────────────
-  Total vehicles : 148
-  Flow rate      : 12.40 vehicles/min
-  car            : 97
-  motorcycle     : 31
-  truck          : 14
-  bus            : 6
-  Sum check      : 148 == 148
-─────────────────────────────────────────
-```
-
-The HUD overlay on each frame shows running totals and flow rate in real time. A `sample_output.png` can be saved mid-run by pressing `S`.
 
 ---
 
