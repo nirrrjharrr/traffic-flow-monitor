@@ -1,39 +1,188 @@
 # Traffic Flow Monitor
 
-Simple vehicle detection and counting project using YOLOv8 and OpenCV.
+A computer vision pipeline for vehicle detection, tracking, and counting from fixed-camera road footage. Built with YOLOv8 and OpenCV, it uses persistent multi-object tracking and a line-crossing logic to produce per-class vehicle counts and flow rate estimates.
 
-## Requirements
+---
 
-- Python 3.10+
-- ultralytics
-- opencv-python
-- Model weights (for example: `yolov8s.pt`)
+## What Problem It Solves
 
-Install dependencies:
+Manual traffic surveys are labor-intensive and inconsistent. This system automates vehicle counting from pre-recorded or real-time video, providing structured output (total count, per-class breakdown, flow rate) that can inform traffic signal timing, congestion studies, or transport planning — without requiring roadside hardware beyond a camera.
 
-```bash
-pip install -r requirements.txt
+---
+
+## Key Features
+
+- **YOLOv8s detection** with class-specific confidence thresholds (lower threshold for motorcycles to compensate for their smaller visual footprint)
+- **ByteTrack multi-object tracking** with persistent IDs across frames, preventing double-counts due to temporary occlusion
+- **Binary line-crossing counter** with a configurable dead-band zone to suppress jitter near the count line
+- **ROI masking** via a binary PNG mask to restrict detection to a specific road region, reducing false positives from background clutter
+- **Per-class counting** for cars, trucks, buses, and motorcycles, with a flow rate (vehicles/minute) calculated from elapsed time since first detection
+- **Minimum bounding-box area filter** to discard spurious small detections
+- **Video output** written to disk alongside real-time display
+
+---
+
+## How It Works
+
+```
+Input Video
+    │
+    ▼
+Mask Application (bitwise AND with ROI mask)
+    │
+    ▼
+YOLOv8s Detection + ByteTrack Tracking
+    │   (runs on masked frame; returns boxes, class labels, track IDs, confidence)
+    │
+    ▼
+Detection Filtering
+    │   - class must be in {car, truck, bus, motorcycle}
+    │   - confidence ≥ threshold (class-specific)
+    │   - bounding box area ≥ MIN_BOX_AREA
+    │
+    ▼
+LineCrossCounter.update()
+    │   - centroid y-coordinate classified as above / below / inside dead-band
+    │   - a count is registered when a tracked ID transitions from one side to the other
+    │   - each ID is counted at most once
+    │
+    ▼
+Annotated Frame (bounding boxes, IDs, centroids, HUD overlay)
+    │
+    ▼
+Display + Video Write (output.mp4)
 ```
 
-Run:
+The dead-band (`LINE_TOLERANCE = 8 px`) prevents a centroid hovering at the line from triggering multiple counts in consecutive frames.
+
+---
+
+## Tech Stack
+
+| Component | Library / Tool |
+|---|---|
+| Object detection | [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) (`yolov8s.pt`) |
+| Multi-object tracking | ByteTrack (via `ultralytics` tracker config) |
+| Video I/O & rendering | OpenCV (`cv2`) |
+| Numerical operations | NumPy (via OpenCV internals) |
+| Python | 3.10+ |
+
+---
+
+## Setup and Usage
+
+### Prerequisites
 
 ```bash
-python src/main.py
+pip install ultralytics opencv-python
 ```
+
+The YOLOv8s weights (`yolov8s.pt`) are downloaded automatically by Ultralytics on first run.
+
+### File structure expected
+
+```
+project/
+├── main.py
+├── mask.png          # binary mask (white = ROI, black = ignored)
+└── videos/
+    └── traffic_main.mp4
+```
+
+### Running
+
+```bash
+python main.py
+```
+
+**Controls during playback:**
+
+| Key | Action |
+|---|---|
+| `S` | Save current frame as `sample_output.png` |
+| `ESC` | Exit and print final counts |
+
+Output video is saved to `output.mp4`.
+
+### Configuration
+
+All tunable parameters are grouped at the top of `main.py`:
+
+```python
+VIDEO_PATH             = "videos/traffic_main.mp4"
+MODEL_PATH             = "yolov8s.pt"
+MASK_PATH              = "mask.png"
+CONF_THRESHOLD         = 0.45
+MOTORCYCLE_CONF_THRESHOLD = 0.30
+MIN_BOX_AREA           = 400
+LINE_Y_RATIO           = 0.55   # count line as fraction of frame height
+LINE_TOLERANCE         = 8      # dead-band half-width in pixels
+```
+
+---
+
+## Example Output
+
+At exit, the terminal prints a structured summary:
+
+```
+── FINAL COUNT ─────────────────────────
+  Total vehicles : 148
+  Flow rate      : 12.40 vehicles/min
+  car            : 97
+  motorcycle     : 31
+  truck          : 14
+  bus            : 6
+  Sum check      : 148 == 148
+─────────────────────────────────────────
+```
+
+The HUD overlay on each frame shows running totals and flow rate in real time. A `sample_output.png` can be saved mid-run by pressing `S`.
+
+---
 
 ## Limitations
 
-- Accuracy drops in low light, rain, glare, and heavy occlusion.
-- Static ROI mask is camera-specific and must be redrawn for new views.
-- ID switches in tracking can cause missed counts or double counts.
-- Current setup is best for mostly one-direction flow near a single counting line.
+These are genuine constraints of the current design, not implementation bugs. Any deployment should account for them.
 
-## Improvements
+**1. The mask is manually drawn and not transferable.**
+The ROI mask (`mask.png`) is created for one specific camera angle and scene. Using a different camera position, zoom level, or mounting height requires drawing a new mask from scratch. There is no automatic scene adaptation.
 
-- Fine-tune YOLOv8 on local traffic data.
-- Add directional and multi-lane counting logic.
-- Add evaluation against manually labeled ground truth.
-- Optimize for real-time edge deployment.
+**2. Performance is sensitive to camera angle and motion direction.**
+The line-crossing logic assumes vehicles move predominantly in one direction (top-to-bottom or bottom-to-top across the count line). Intersections with crossing flows, U-turns, or vehicles that stop on the line will produce incorrect counts. The counter also has no directionality — it counts any transition, regardless of travel direction.
+
+**3. YOLO misclassification is a real source of error.**
+The pretrained COCO weights were not optimized for traffic surveillance. Common failure modes observed: trucks classified as cars at distance, motorcycles missed when occluded by another vehicle or when viewed at an angle, and three-wheelers (common in local traffic) having no corresponding class at all. The lower confidence threshold for motorcycles partially compensates but increases false positive risk.
+
+**4. Occlusion causes track fragmentation.**
+When a vehicle is fully occluded behind another (common in dense traffic), ByteTrack may assign it a new ID when it re-emerges. If the centroid crosses the line after the ID changes, this can result in double-counting.
+
+**6. Not validated against ground truth.**
+There is no evaluation against a manually annotated count. Reported counts should be treated as estimates. Accuracy on a given video depends heavily on scene complexity and camera quality.
+
+---
+
+## Possible Improvements
+
+**Adaptive or learned ROI selection**
+Replace the static binary mask with a learned or semi-automatic region proposal — for example, using perspective transform to define a road polygon from lane markings, or training a segmentation model to identify drivable area.
+
+**Domain-specific fine-tuning**
+Fine-tune YOLOv8 on a labeled dataset from local traffic conditions. This would improve detection of motorcycles, auto-rickshaws, and other vehicle types underrepresented in COCO. Datasets such as MIO-TCD or custom-annotated local footage would be appropriate starting points.
+
+**Bidirectional and multi-lane counting**
+Extend the counter to distinguish direction of travel (using centroid trajectory slope) and to handle multiple lanes independently via separate virtual lines or lane-aware tracking zones.
+
+**Small object detection improvement**
+Replace or supplement YOLOv8s with a model variant tuned for small object detection, or apply super-resolution preprocessing on high-density regions of the frame.
+
+**Trajectory-based analysis**
+Store per-track centroid histories to enable speed estimation (via homography mapping from image to world coordinates), lane-change detection, and vehicle queue analysis.
+
+**Evaluation framework**
+Add a ground-truth annotation tool and evaluation script to measure precision, recall, and counting accuracy (MOTA/MOTP or similar) on labeled video segments.
+
+---
 
 ## License
 
@@ -44,3 +193,4 @@ YOLOv8 is licensed under AGPL-3.0 (Ultralytics). Ensure compliance when deployin
 - [Ultralytics YOLOv8 Documentation](https://docs.ultralytics.com/)
 - [OpenCV Documentation](https://opencv.org/)
 - [PyTorch Documentation](https://pytorch.org/docs/)
+
