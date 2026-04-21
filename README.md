@@ -82,36 +82,42 @@ The YOLOv8s weights (`yolov8s.pt`) are downloaded automatically by Ultralytics o
 ### File structure expected
 
 ```
-project/
-├── main.py
-├── mask.png          # binary mask (white = ROI, black = ignored)
-└── videos/
-    └── traffic_main.mp4
+traffic-flow-monitor/
+├── src/
+│   └── main.py
+├── assets/
+│   ├── mask.png
+│   └── sample_output.png
+├── README.md
+├── requirements.txt
+└── .gitignore
 ```
+
+Local input videos should stay outside Git tracking (for example in `videos/`), and are ignored by `.gitignore`.
 
 ### Running
 
 ```bash
-python main.py
+python src/main.py
 ```
 
 **Controls during playback:**
 
 | Key | Action |
 |---|---|
-| `S` | Save current frame as `sample_output.png` |
+| `S` | Save current frame as `assets/sample_output.png` |
 | `ESC` | Exit and print final counts |
 
 Output video is saved to `output.mp4`.
 
 ### Configuration
 
-All tunable parameters are grouped at the top of `main.py`:
+All tunable parameters are grouped at the top of `src/main.py`:
 
 ```python
 VIDEO_PATH             = "videos/traffic_main.mp4"
 MODEL_PATH             = "yolov8s.pt"
-MASK_PATH              = "mask.png"
+MASK_PATH              = "assets/mask.png"
 CONF_THRESHOLD         = 0.45
 MOTORCYCLE_CONF_THRESHOLD = 0.30
 MIN_BOX_AREA           = 400
@@ -137,7 +143,7 @@ At exit, the terminal prints a structured summary:
 ─────────────────────────────────────────
 ```
 
-The HUD overlay on each frame shows running totals and flow rate in real time. A `sample_output.png` can be saved mid-run by pressing `S`.
+The HUD overlay on each frame shows running totals and flow rate in real time. A `sample_output.png` can be saved to `assets/sample_output.png` by pressing `S`.
 
 ---
 
@@ -146,7 +152,7 @@ The HUD overlay on each frame shows running totals and flow rate in real time. A
 These are genuine constraints of the current design, not implementation bugs. Any deployment should account for them.
 
 **1. The mask is manually drawn and not transferable.**
-The ROI mask (`mask.png`) is created for one specific camera angle and scene. Using a different camera position, zoom level, or mounting height requires drawing a new mask from scratch. There is no automatic scene adaptation.
+The ROI mask (`assets/mask.png`) is created for one specific camera angle and scene. Using a different camera position, zoom level, or mounting height requires drawing a new mask from scratch. There is no automatic scene adaptation.
 
 **2. Performance is sensitive to camera angle and motion direction.**
 The line-crossing logic assumes vehicles move predominantly in one direction (top-to-bottom or bottom-to-top across the count line). Intersections with crossing flows, U-turns, or vehicles that stop on the line will produce incorrect counts. The counter also has no directionality — it counts any transition, regardless of travel direction.

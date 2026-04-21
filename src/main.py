@@ -8,7 +8,7 @@ from ultralytics import YOLO
 VIDEO_PATH   = "videos/traffic_main.mp4"
 MODEL_PATH   = "yolov8s.pt"
 WINDOW_NAME  = "Traffic Counter"
-MASK_PATH    = "mask.png"
+MASK_PATH    = "assets/mask.png"
 
 CONF_THRESHOLD = 0.45
 MOTORCYCLE_CONF_THRESHOLD = 0.30
@@ -268,7 +268,7 @@ def run(model, cap, mask, out):
         
         # press 's' to save image
         if key == ord('s'):
-            cv2.imwrite("sample_output.png", frame)
+            cv2.imwrite("assets/sample_output.png", frame)
             print("Image saved!")
 
         if key == 27:
