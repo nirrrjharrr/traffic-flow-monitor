@@ -145,6 +145,8 @@ At exit, the terminal prints a structured summary:
 
 The HUD overlay on each frame shows running totals and flow rate in real time. A `sample_output.png` can be saved to `assets/sample_output.png` by pressing `S`.
 
+![Output](assets/sample_output.png)
+
 ---
 
 ## Limitations
