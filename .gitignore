@@ -1,0 +1,55 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter / notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Model weights and large artifacts
+*.pt
+*.onnx
+*.engine
+*.tflite
+*.pb
+*.h5
+*.ckpt
+
+# Videos and datasets
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+Videos/
+videos/
+dataset/
+datasets/
+data/
+
+# Output artifacts
+output.mp4
+
+# Optional local config
+.env
