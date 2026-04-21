@@ -14,6 +14,18 @@ Manual traffic surveys are labor-intensive and inconsistent. This system automat
 
 ![Sample output](assets/sample_output.png)
 
+Example terminal summary at exit:
+
+| Metric | Value |
+|---|---|
+| Total vehicles | 148 |
+| Flow rate | 12.40 vehicles/min |
+| car | 97 |
+| motorcycle | 31 |
+| truck | 14 |
+| bus | 6 |
+| Sum check | 148 == 148 |
+
 The overlay shows live detections, track IDs, cumulative class counts, and flow rate during playback. Press `S` to save the current frame as `sample_output.png`.
 
 ---
